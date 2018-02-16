@@ -2759,7 +2759,7 @@ static void onFSInitialized(FileSystem* fs)
 	setWindowIcon();
 
 	studio.renderer = SDL_CreateRenderer(studio.window, -1, 
-#if defined(__CHIP__)
+#if defined(__CHIP__) || defined(__LIBRETRO__)
 		SDL_RENDERER_SOFTWARE
 #elif defined(__EMSCRIPTEN__)
 		SDL_RENDERER_ACCELERATED

@@ -1,0 +1,170 @@
+3RD_PARTY = 3rd-party
+DUKTAPE_LIB = $(3RD_PARTY)/duktape-2.2.0/src
+BLIPBUF_LIB = $(3RD_PARTY)/blip-buf
+SDL_NET_LIB = $(3RD_PARTY)/SDL2_net-2.0.1
+
+PRE_BUILT = $(3RD_PARTY)/pre-built
+
+
+INCLUDES= \
+	-I$(3RD_PARTY)/lua-5.3.1/src \
+	-I$(3RD_PARTY)/zlib-1.2.8 \
+	-I$(3RD_PARTY)/giflib-5.1.4/lib \
+	-I$(3RD_PARTY)/SDL2-2.0.7/include \
+	-I$(3RD_PARTY)/wren-0.1.0/src/include \
+	-I$(3RD_PARTY)/moonscript \
+	-I$(BLIPBUF_LIB) \
+	-I$(DUKTAPE_LIB) \
+	-I$(SDL_NET_LIB) \
+	-Iinclude
+
+MINGW_LINKER_FLAGS= \
+	-L$(PRE_BUILT)/mingw \
+	-lmingw32 \
+	-lSDL2main \
+	-lSDL2 \
+	-lz \
+	-lgif \
+	-llua \
+	-lwren \
+	-lcomdlg32 \
+	-lws2_32 \
+	-mwindows
+
+GTK_INCLUDES= `pkg-config --cflags gtk+-3.0`
+GTK_LIBS= `pkg-config --libs gtk+-3.0`
+
+LINUX_INCLUDES= \
+	$(GTK_INCLUDES) \
+	`sdl2-config --cflags`
+
+LINUX_LIBS= \
+	$(GTK_LIBS) \
+	`sdl2-config --static-libs` \
+	-L$(3RD_PARTY)/wren-0.1.0/lib
+
+LINUX64_LIBS= \
+	$(GTK_LIBS) \
+	-L$(PRE_BUILT)/linux64
+
+LINUX32_LIBS= \
+	$(GTK_LIBS) \
+	-L$(PRE_BUILT)/linux32
+
+LINUX_ARM_LIBS= \
+	-L$(PRE_BUILT)/arm
+
+LINUX_LINKER_LTO_FLAGS= \
+	-D_GNU_SOURCE \
+	-lSDL2 \
+	-llua \
+	-lwren \
+	-lgif \
+	-ldl \
+	-lm \
+	-lpthread \
+	-lrt \
+	-lz
+
+LINUX_LINKER_FLAGS= \
+	-D_GNU_SOURCE \
+	-llua5.3 \
+	-lwren \
+	-ldl \
+	-lm \
+	-lpthread \
+	-lrt \
+	-lz
+
+MINGW_OUTPUT=$(BIN_NAME).exe
+
+EMS_CC=emcc
+EMS_OPT= \
+	-D_GNU_SOURCE \
+	-Wno-typedef-redefinition \
+	-s USE_SDL=2 \
+	-s TOTAL_MEMORY=67108864 \
+	--llvm-lto 1 \
+	--memory-init-file 0 \
+	--pre-js build/html/prejs.js \
+	-s 'EXTRA_EXPORTED_RUNTIME_METHODS=["writeArrayToMemory"]'
+
+EMS_LINKER_FLAGS= \
+	-L$(PRE_BUILT)/emscripten \
+	-llua \
+	-lwren \
+	-lgif \
+	-lz
+
+MACOSX_OPT= \
+	-mmacosx-version-min=10.6 \
+	-Wno-typedef-redefinition \
+	-D_THREAD_SAFE \
+	-D_GNU_SOURCE
+
+MACOSX_LIBS= \
+	-L$(PRE_BUILT)/macos \
+	-L/usr/local/lib \
+	-lSDL2 -lm -liconv -lobjc -llua -lwren -lz -lgif \
+	-Wl,-framework,CoreAudio \
+	-Wl,-framework,AudioToolbox \
+	-Wl,-framework,ForceFeedback \
+	-Wl,-framework,CoreVideo \
+	-Wl,-framework,Cocoa \
+	-Wl,-framework,Carbon \
+	-Wl,-framework,IOKit
+
+SOURCES=\
+	src/studio.c \
+	src/console.c \
+	src/run.c \
+	src/ext/file_dialog.c \
+	src/ext/md5.c \
+	src/ext/gif.c \
+	$(SDL_NET_LIB)/SDLnet.c \
+	$(SDL_NET_LIB)/SDLnetTCP.c \
+	$(SDL_NET_LIB)/SDLnetselect.c \
+	src/fs.c \
+	src/tools.c \
+	src/start.c \
+	src/sprite.c \
+	src/map.c \
+	src/sfx.c \
+	src/music.c \
+	src/history.c \
+	src/world.c \
+	src/config.c \
+	src/code.c \
+	src/dialog.c \
+	src/menu.c \
+	src/net.c \
+	src/surf.c
+
+SOURCES_EXT= \
+	src/html.c
+
+LPEG_SRC= $(3RD_PARTY)/lpeg-1.0.1/*.c
+GIF_SRC= $(3RD_PARTY)/giflib-5.1.4/lib/*.c
+BLIP_SRC= $(BLIPBUF_LIB)/blip_buf.c
+
+DEMO_ASSETS= \
+	bin/assets/fire.tic.dat \
+	bin/assets/p3d.tic.dat \
+	bin/assets/palette.tic.dat \
+	bin/assets/quest.tic.dat \
+	bin/assets/sfx.tic.dat \
+	bin/assets/music.tic.dat \
+	bin/assets/font.tic.dat \
+	bin/assets/tetris.tic.dat \
+	bin/assets/jsdemo.tic.dat \
+	bin/assets/luademo.tic.dat \
+	bin/assets/moondemo.tic.dat \
+	bin/assets/wrendemo.tic.dat \
+	bin/assets/benchmark.tic.dat \
+	bin/assets/config.tic.dat
+
+
+TIC80_H = include/tic80_types.h include/tic80.h include/tic80_config.h src/tic.h src/ticapi.h src/machine.h
+
+TIC_H= src/*.h \
+	src/ext/*.h

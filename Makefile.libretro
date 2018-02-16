@@ -1,0 +1,208 @@
+
+DEBUG = 0
+
+include Makefile.common
+
+ifeq ($(platform),)
+platform = unix
+ifeq ($(shell uname -a),)
+   platform = win
+else ifneq ($(findstring Darwin,$(shell uname -a)),)
+   platform = osx
+else ifneq ($(findstring MINGW32,$(shell uname -a)),)
+   platform = win32
+else ifneq ($(findstring MINGW64,$(shell uname -a)),)
+   platform = win64
+endif
+endif
+
+TARGET_NAME := tic80
+
+ifeq ($(platform), unix)
+	CC = gcc
+	CXX = g++
+	CFLAGS = -g -O2
+	CXXFLAGS = -g -O2  -fno-merge-constants
+	TARGET := $(TARGET_NAME)_libretro.so
+	fpic := -fPIC
+	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=libretro/link.T
+	ENDIANNESS_DEFINES := -DLSB_FIRST
+	FLAGS += -D__LINUX__
+	SDL_PREFIX := unix
+	SDL_LIBS:= libretro/libs/SDL2_image_unix.a libretro/libs/libSDL2_unix.a
+	EXTRA_LDF = -lpthread -lm -lpng -ljpeg
+# android arm
+else ifneq (,$(findstring android,$(platform)))
+   	TARGET := $(TARGET_NAME)_libretro_android.so
+   	fpic = -fPIC
+   	SHARED := -lstdc++ -llog -lz -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
+	CFLAGS +=  -g -O2
+   	CC = arm-linux-androideabi-gcc
+   	CXX = arm-linux-androideabi-g++
+else ifeq ($(platform), wiiu)
+	TARGET := $(TARGET_NAME)_libretro_$(platform).a
+	CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
+	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
+	AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
+	COMMONFLAGS += -DWIIU -mwup -mcpu=750 -meabi -mhard-float -D__POWERPC__ -D__ppc__
+	COMMONFLAGS += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int -DMSB_FIRST -DWORDS_BIGENDIAN=1
+	COMMONFLAGS += -I../.. -I../../wiiu-deps
+	CFLAGS += $(COMMONFLAGS) -O2  -Wall -D__LIBRETRO__
+	CXXFLAGS += $(COMMONFLAGS) -g -O2  -fno-merge-constants
+	ENDIANNESS_DEFINES += -DMSB_FIRST
+	SDL_PREFIX := wiiu
+	EXTRA_INCLUDES := -Ideps
+	STATIC_LINKING = 1
+	EXTRA_LDF =
+# cross Windows
+else ifeq ($(platform), win32)
+	TARGET := $(TARGET_NAME)_libretro.dll
+	AR = i686-w64-mingw32-ar rc
+	CC =  i686-w64-mingw32-gcc-win32
+	CXX =  i686-w64-mingw32-g++-win32
+	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=libretro/link.T
+	LDFLAGS += -static-libgcc -static-libstdc++
+	ENDIANNESS_DEFINES := -DLSB_FIRST
+	FLAGS +=
+	EXTRA_LDF := -lwinmm -lm -lpng -ljpeg -Wl,--export-all-symbols -lws2_32
+	SDL_PREFIX := win
+	SDL_LIBS:= libretro/libs/SDL2_image_win32.a libretro/libs/libSDL2_win32.a
+else ifeq ($(platform), win64)
+	TARGET := $(TARGET_NAME)_libretro.dll
+	AR = x86_64-w64-mingw32-ar
+	CC = x86_64-w64-mingw32-gcc
+	CXX = x86_64-w64-mingw32-g++
+	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=libretro/link.T
+	LDFLAGS += -static-libgcc -static-libstdc++
+	ENDIANNESS_DEFINES := -DLSB_FIRST
+	FLAGS += -Ibuild/windows/include
+	EXTRA_LDF := -lwinmm -lole32 -lm -lpng -ljpeg -Wl,--export-all-symbols \
+	-lcomdlg32 -lws2_32 -mwindows
+	SDL_PREFIX := win
+	SDL_LIBS:= libretro/libs/SDL2_image_win64.a libretro/libs/libSDL2_win64.a
+else
+	TARGET :=  $(TARGET_NAME)_retro.dll
+	CC = gcc
+	CXX = g++
+	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=libretro/link.T
+	LDFLAGS += -static-libgcc -static-libstdc++
+	ENDIANNESS_DEFINES := -DLSB_FIRST
+	FLAGS += -Ibuild/windows/include
+	EXTRA_LDF = -lwinmm -lole32 -lm -lpng -ljpeg -Wl,--export-all-symbols
+	SDL_PREFIX := win
+	SDL_LIBS:= libretro/libs/SDL2_image_win64.a libretro/libs/SDL2_image_win64.a
+endif
+
+#OBJ_SDL := $(wildcard ./obj/*.o)
+OBJECTS := libretro/libretro.o \
+	bin/tic.o \
+	bin/tic80.o \
+	bin/blip_buf.o \
+	bin/luaapi.o \
+	bin/jsapi.o \
+	bin/wrenapi.o \
+	bin/html.o \
+	bin/studio.o \
+	bin/console.o \
+	bin/run.o \
+	bin/file_dialog.o \
+	bin/md5.o \
+	bin/gif.o \
+	bin/SDLnet.o \
+	bin/SDLnetTCP.o \
+	bin/SDLnetselect.o \
+	bin/fs.o \
+	bin/tools.o \
+	bin/start.o \
+	bin/sprite.o \
+	bin/map.o \
+	bin/sfx.o \
+	bin/music.o \
+	bin/history.o \
+	bin/world.o \
+	bin/config.o \
+	bin/code.o \
+	bin/net.o \
+	bin/dialog.o \
+	bin/menu.o \
+	bin/surf.o
+
+GIFLIB_SOURCES := $(wildcard $(3RD_PARTY)/giflib-5.1.4/lib/*.c)
+ZLIB_SOURCES := $(wildcard $(3RD_PARTY)/zlib-1.2.8/*.c)
+DUKTAPE_SOURCES := $(wildcard $(DUKTAPE_LIB)/*.c)
+WREN_SOURCES := $(wildcard $(3RD_PARTY)/wren-0.1.0/src/vm/*.c $(3RD_PARTY)/wren-0.1.0/src/optional/*.c)
+INCLUDES += -I$(3RD_PARTY)/wren-0.1.0/src/optional -I$(3RD_PARTY)/wren-0.1.0/src/vm
+LUA_SOURCES := $(wildcard $(3RD_PARTY)/lua-5.3.1/src/*.c)
+LUA_SOURCES := $(LUA_SOURCES:$(3RD_PARTY)/lua-5.3.1/src/lua.c=)
+OBJECTS += \
+	$(GIFLIB_SOURCES:.c=.o) \
+	$(ZLIB_SOURCES:.c=.o) \
+	$(LUA_SOURCES:.c=.o) \
+	$(DUKTAPE_SOURCES:.c=.o) \
+	$(WREN_SOURCES:.c=.o)
+
+#$(OBJ_SDL)
+
+all: $(TARGET)
+
+ifeq ($(DEBUG), 0)
+   FLAGS += -O3 -fomit-frame-pointer
+else
+   FLAGS += -O0 -g
+endif
+
+ifeq ($(platform), wiiu)
+OBJ_SDL := $(wildcard ./test/*.o)
+LDFLAGS +=  $(fpic) $(SHARED) $(EXTRA_LDF)
+else
+LDFLAGS +=  $(fpic) $(SHARED) $(SDL_LIBS) -lpthread -lm -lpng -ljpeg $(EXTRA_LDF)
+endif
+
+FLAGS += -Ilibretro -Ilibretro/include $(INCLUDES)
+
+WARNINGS :=
+
+FLAGS += -D__LIBRETRO__ $(ENDIANNESS_DEFINES) $(WARNINGS) $(fpic)
+
+CXXFLAGS += $(FLAGS) -fpermissive
+CFLAGS += $(FLAGS) -std=gnu99
+
+$(TARGET): $(OBJECTS)
+ifeq ($(STATIC_LINKING),1)
+	$(AR) rcs $@ $(OBJECTS) $(OBJ_SDL)
+else
+	$(CXX) -o $@ $^ $(LDFLAGS)
+endif
+
+bin/SDL%.o: $(SDL_NET_LIB)/SDL%.c $(TIC80_H) $(TIC_H)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+bin/duktape.o: $(DUKTAPE_LIB)/duktape.c $(TIC80_H)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+bin/blip_buf.o: $(BLIPBUF_LIB)/blip_buf.c
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+bin/console.o: src/console.c $(TIC80_H) $(TIC_H) $(DEMO_ASSETS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+bin/config.o: src/config.c $(TIC80_H) $(TIC_H) $(DEMO_ASSETS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+bin/%.o: src/ext/%.c $(TIC80_H) $(TIC_H)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+bin/%.o: src/%.c $(TIC80_H) $(TIC_H)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+%.o: %.c
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+%.o: %.cpp
+	$(CXX) -c -o $@ $< $(CXXFLAGS)
+
+
+clean:
+	rm -f $(TARGET) $(OBJECTS)
+
+.PHONY: clean
