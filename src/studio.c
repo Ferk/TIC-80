@@ -237,12 +237,12 @@ static struct
 	.window = NULL,
 	.renderer = NULL,
 	.texture = NULL,
-	.audio = 
+	.audio =
 	{
 		.device = 0,
 	},
 
-	.cart = 
+	.cart =
 	{
 		.mdate = 0,
 	},
@@ -289,7 +289,7 @@ static struct
 		.show = false,
 	},
 
-	.bank = 
+	.bank =
 	{
 		.show = false,
 		.chained = true,
@@ -451,7 +451,7 @@ bool fromClipboard(void* data, s32 size, bool flip, bool remove_white_spaces)
 			{
 				if (remove_white_spaces)
 					removeWhiteSpaces(clipboard);
-							
+
 				bool valid = strlen(clipboard) == size * 2;
 
 				if(valid) str2buf(clipboard, strlen(clipboard), data, flip);
@@ -625,7 +625,7 @@ static void drawBankIcon(s32 x, s32 y)
 
 				if(checkMouseClick(&rect, SDL_BUTTON_LEFT))
 				{
-					if(studio.bank.chained) 
+					if(studio.bank.chained)
 						SDL_memset(studio.bank.indexes, i, sizeof studio.bank.indexes);
 					else studio.bank.indexes[mode] = i;
 				}
@@ -816,16 +816,16 @@ void setStudioEvent(StudioEvent event)
 {
 	switch(studio.mode)
 	{
-	case TIC_CODE_MODE: 	
+	case TIC_CODE_MODE:
 		{
 			Code* code = studio.editor[studio.bank.index.code].code;
-			code->event(code, event); 			
+			code->event(code, event);
 		}
 		break;
-	case TIC_SPRITE_MODE:	
+	case TIC_SPRITE_MODE:
 		{
 			Sprite* sprite = studio.editor[studio.bank.index.sprites].sprite;
-			sprite->event(sprite, event); 
+			sprite->event(sprite, event);
 		}
 	break;
 	case TIC_MAP_MODE:
@@ -1209,8 +1209,8 @@ static void calcTextureRect(SDL_Rect* rect)
 
 		rect->x = (rect->w - discreteWidth) / 2;
 
-		rect->y = rect->w > rect->h 
-			? (rect->h - discreteHeight) / 2 
+		rect->y = rect->w > rect->h
+			? (rect->h - discreteHeight) / 2
 			: OFFSET_LEFT*discreteWidth/TIC80_WIDTH;
 
 		rect->w = discreteWidth;
@@ -1250,7 +1250,7 @@ static void processKeyboard()
 
 static bool checkTouch(const SDL_Rect* rect, s32* x, s32* y)
 {
-	s32 devices = SDL_GetNumTouchDevices();
+	s32 devices = 0; //SDL_GetNumTouchDevices();
 	s32 width = 0, height = 0;
 	SDL_GetWindowSize(studio.window, &width, &height);
 
@@ -1535,6 +1535,7 @@ static void processGamepad()
 
 static void processGesture()
 {
+	return;
 	SDL_TouchID id = SDL_GetTouchDevice(0);
 	s32 fingers = SDL_GetNumTouchFingers(id);
 
@@ -1911,7 +1912,7 @@ static void processMouseInput()
 
 static void processKeyboardInput()
 {
-	static const u8 KeyboardCodes[] = 
+	static const u8 KeyboardCodes[] =
 	{
 		#include "keycodes.c"
 	};
@@ -2001,7 +2002,7 @@ SDL_Event* pollEvent()
 
 							showDialog(Rows, COUNT_OF(Rows), reloadConfirm, NULL);
 						}
-						else console->updateProject(console);						
+						else console->updateProject(console);
 					}
 				}
 
@@ -2121,7 +2122,7 @@ static void drawDesyncLabel(u32* frame)
 			0b0010001010010100,
 			0b1100110010010011,
 		};
-		
+
 		enum{sx = TIC80_WIDTH-24, sy = 8, Cols = sizeof DesyncLabel[0]*BITS_IN_BYTE, Rows = COUNT_OF(DesyncLabel)};
 
 		const u32* pal = tic_palette_blit(&studio.tic->config.palette);
@@ -2344,7 +2345,7 @@ static void drawPopup()
 			anim = (((POPUP_DUR - Dur) - studio.popup.counter) * (TIC_FONT_HEIGHT+1) / Dur);
 
 		studio.tic->api.rect(studio.tic, 0, anim, TIC80_WIDTH, TIC_FONT_HEIGHT+1, (tic_color_red));
-		studio.tic->api.text(studio.tic, studio.popup.message, 
+		studio.tic->api.text(studio.tic, studio.popup.message,
 			(s32)(TIC80_WIDTH - strlen(studio.popup.message)*TIC_FONT_WIDTH)/2,
 			anim + 1, (tic_color_white));
 	}
@@ -2391,16 +2392,16 @@ static void renderStudio()
 	case TIC_START_MODE:	studio.start->tick(studio.start); break;
 	case TIC_CONSOLE_MODE: 	studio.console->tick(studio.console); break;
 	case TIC_RUN_MODE: 		studio.run->tick(studio.run); break;
-	case TIC_CODE_MODE: 	
+	case TIC_CODE_MODE:
 		{
 			Code* code = studio.editor[studio.bank.index.code].code;
 			code->tick(code);
 		}
 		break;
-	case TIC_SPRITE_MODE:	
+	case TIC_SPRITE_MODE:
 		{
 			Sprite* sprite = studio.editor[studio.bank.index.sprites].sprite;
-			sprite->tick(sprite);		
+			sprite->tick(sprite);
 		}
 		break;
 	case TIC_MAP_MODE:
@@ -2438,7 +2439,7 @@ static void renderStudio()
 
 	if(studio.mode != TIC_RUN_MODE)
 		useSystemPalette();
-	
+
 	blitTexture();
 
 	renderCursor();
@@ -2702,7 +2703,8 @@ static void onFSInitialized(FileSystem* fs)
 		(TIC80_FULLWIDTH) * STUDIO_UI_SCALE,
 		(TIC80_FULLHEIGHT) * STUDIO_UI_SCALE,
 		SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
-#if defined(__CHIP__)
+#if defined(__CHIP__)  || defined(__LIBRETRO__)
+
 			| SDL_WINDOW_FULLSCREEN_DESKTOP
 #endif
 		);
@@ -2758,7 +2760,7 @@ static void onFSInitialized(FileSystem* fs)
 	// set the window icon before renderer is created (issues on Linux)
 	setWindowIcon();
 
-	studio.renderer = SDL_CreateRenderer(studio.window, -1, 
+	studio.renderer = SDL_CreateRenderer(studio.window, -1,
 #if defined(__CHIP__) || defined(__LIBRETRO__)
 		SDL_RENDERER_SOFTWARE
 #elif defined(__EMSCRIPTEN__)
@@ -2839,6 +2841,7 @@ s32 main(s32 argc, char **argv)
 
 			nextTick += Delta;
 			tick();
+			printf("TICK ERROR: %s\n", SDL_GetError());
 
 			{
 				s64 delay = nextTick - SDL_GetPerformanceCounter();
